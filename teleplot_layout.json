@@ -1,0 +1,103 @@
+{
+   "widgets": [
+      {
+         "type": "chart",
+         "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 0
+         },
+         "series": [
+            {
+               "name": "voltageADC",
+               "sourceNames": [
+                  "voltageADC"
+               ],
+               "formula": "",
+               "options": {
+                  "_serie": "voltageADC",
+                  "stroke": "rgba(231,76,60,1)",
+                  "fill": "rgba(231,76,60,0.1)"
+               },
+               "type": "number"
+            },
+            {
+               "name": "voltageESPFiltered",
+               "sourceNames": [
+                  "voltageESPFiltered"
+               ],
+               "formula": "",
+               "options": {
+                  "_serie": "voltageESPFiltered",
+                  "stroke": "rgba(52,152,219,1)",
+                  "fill": "rgba(52,152,219,0.1)"
+               },
+               "type": "number"
+            }
+         ]
+      },
+      {
+         "type": "chart",
+         "gridPos": {
+            "h": 5,
+            "w": 12,
+            "x": 0,
+            "y": 0
+         },
+         "series": [
+            {
+               "name": "voltageESPFiltered",
+               "sourceNames": [
+                  "voltageESPFiltered"
+               ],
+               "formula": "",
+               "options": {
+                  "_serie": "voltageESPFiltered",
+                  "stroke": "rgba(231,76,60,1)",
+                  "fill": "rgba(231,76,60,0.1)"
+               },
+               "type": "number"
+            },
+            {
+               "name": "voltageESP",
+               "sourceNames": [
+                  "voltageESP"
+               ],
+               "formula": "",
+               "options": {
+                  "_serie": "voltageESP",
+                  "stroke": "rgba(52,152,219,1)",
+                  "fill": "rgba(52,152,219,0.1)"
+               },
+               "type": "number"
+            }
+         ]
+      },
+      {
+         "type": "chart",
+         "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 0
+         },
+         "series": [
+            {
+               "name": "voltageDelta",
+               "sourceNames": [
+                  "voltageDelta"
+               ],
+               "formula": "",
+               "options": {
+                  "_serie": "voltageDelta",
+                  "stroke": "rgba(231,76,60,1)",
+                  "fill": "rgba(231,76,60,0.1)"
+               },
+               "type": "number"
+            }
+         ]
+      }
+   ],
+   "viewDuration": "60"
+}
