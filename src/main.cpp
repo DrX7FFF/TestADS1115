@@ -6,7 +6,7 @@
 #include <mydebug.h>
 #include <myfunction.h>
 #include <SimpleKalmanFilter.h>
-#include <math.h>
+// #include <math.h>
 
 #define SDA_PIN 18
 #define SCL_PIN 19
@@ -44,22 +44,23 @@ float voltageADCFilter = 0;
 // uint16_t voltageADCRaw = 0;
 
 
-int32_t voltageRaw1 = 0;
-int32_t voltageRawFiltered1 = 0;
+uint16_t voltageRaw1 = 0;
+uint16_t voltageRawFiltered1 = 0;
 float voltageESP1 = 0;
-int32_t voltageRaw2 = 0;
-int32_t voltageRawFiltered2 = 0;
+uint16_t voltageRaw2 = 0;
+uint16_t voltageRawFiltered2 = 0;
 float voltageESP2 = 0;
-int32_t voltageRaw3 = 0;
-int32_t voltageRawFiltered3 = 0;
+uint16_t voltageRaw3 = 0;
+uint16_t voltageRawFiltered3 = 0;
 float voltageESP3 = 0;
 
 // Valable pour une résolution de 9 btis = 512 mesures
 // float measureError = 10;
 // float processNoise = 0.25;
 
-float measureError = 10;
-float processNoise = 0.25;
+// Valable pour une résolution de 10 btis = 1024 mesures
+float measureError = 30;
+float processNoise = 0.22;
 
 
 // SimpleKalmanFilter filterVoltage(0.1, 0.08); //0.08 Amplitude du bruit
@@ -69,7 +70,7 @@ SimpleKalmanFilter filterVoltage2(measureError, processNoise); //10 Amplitude du
 SimpleKalmanFilter filterVoltage3(measureError, processNoise); //10 Amplitude du bruit pour une résolution sur 9 bits 512
 SimpleKalmanFilter filterADC(0.5, 0.4);
 
-int32_t measureErrorMax = 0;
+uint16_t measureErrorMax = 0;
 int measureErrorReset = 0;
 int measureErrorResetMax = 70;
 
@@ -126,7 +127,7 @@ void sendToTeleplot() {
 	voltageESP2 = voltageRawFiltered2 * VSS / ADCMAX;
 	voltageESP3 = voltageRawFiltered3 * VSS / ADCMAX;
 
-	sprintf(buffer, "targetInt:%u\ntargetV:%.3f\nvoltageADC:%.3f\nvoltageADCFilter:%.3f\nmeasureErrorMax:%d\nvoltageRaw1:%u\nvoltageRawFiltered1:%u\nvoltageESP1:%.3f\nvoltageRaw2:%u\nvoltageRawFiltered2:%u\nvoltageESP2:%.3f\nvoltageRaw3:%u\nvoltageRawFiltered3:%u\nvoltageESP3:%.3f\n",
+	sprintf(buffer, "targetInt:%u\ntargetV:%.3f\nvoltageADC:%.3f\nvoltageADCFilter:%.3f\nmeasureErrorMax:%u\nvoltageRaw1:%u\nvoltageRawFiltered1:%u\nvoltageESP1:%.3f\nvoltageRaw2:%u\nvoltageRawFiltered2:%u\nvoltageESP2:%.3f\nvoltageRaw3:%u\nvoltageRawFiltered3:%u\nvoltageESP3:%.3f\n",
 			targetInt,
 			targetV,
 			voltageADC,
@@ -234,7 +235,7 @@ void onReceiveDebug(char *data, size_t len) {
 			DEBUGLOG("Mode Random\n");
 			break;
 		case 'f':
-			activeMode = mode::File;
+			// activeMode = mode::File;
 			modeFileFirst = true;
 			DEBUGLOG("Mode File\n");
 			break;
@@ -328,12 +329,21 @@ void setup() {
 // 	voltageADCRaw = 0;
 // voltageADCRaw = voltageADCRawTemp & 0xFFFF;
 
+uint16_t indice ;
+uint16_t lastIndice;
+float lastMesure;
+uint8_t linecount;
 
 void loop() {
-	if (activeMode == mode::File){
+	if (activeMode == mode::File || modeFileFirst){
 		if (modeFileFirst){
 			modeFileFirst = false;
 			targetInt = 0;
+			indice = 0;
+			lastIndice = 0;
+			lastMesure = 0;
+			linecount = 0;
+			activeMode = mode::File;
 		}
 		else
 			targetInt = (targetInt + 1) & 0xFF;
@@ -355,7 +365,7 @@ void loop() {
 			measureErrorReset = measureErrorResetMax;
 			dacWrite(25, targetInt);
 		}
-	targetV = voltage0 + (voltage255-voltage0)*targetInt/255;
+	// targetV = voltage0 + (voltage255-voltage0)*targetInt/255;
 	delay(200);
 	// delay(500);
 	for(int i = 0; i<3; i++){
@@ -366,30 +376,47 @@ void loop() {
 	sendToTeleplot();
 	ArduinoOTA.handle();
 	if (activeMode == mode::File){
-		long double Rt = R1 * voltageADCFilter / (VSS - voltageADCFilter);
-		long double temperature = (1 / ((1 / T0) + (log(Rt / R0) / BETA))) - 273.15;
-		// long double v1 = Rt / R0;
-		// long double v2 = log(Rt / R0);
-		// long double v3 = log(v1);
+		// long double Rt = R1 * voltageADCFilter / (VSS - voltageADCFilter);
+		// long double temperature = (1 / ((1 / T0) + (log(Rt / R0) / BETA))) - 273.15;
+		uint16_t indiceMesure = (int16_t)(0.5+(float)(voltageRawFiltered1 + voltageRawFiltered2 + voltageRawFiltered3)/3);
+		float mesure = voltageADCFilter;
+		// SI dernière mesure on prolonge pour avoir jusqu'au ADCMAX (valuer max d'échantillonage)
+		if (targetInt == 0xFF && indiceMesure<ADCMAX){
+			mesure = lastMesure; // + (ADCMAX-lastIndice) * (mesure-lastMesure)/(indiceMesure-lastIndice);
+			indiceMesure = ADCMAX;
+		}
+		float value;
+		while(indice<=indiceMesure){
+			if (indice == 0)
+				value = indiceMesure;
+			else
+				value = lastMesure + (indice-lastIndice)*(mesure-lastMesure)/(indiceMesure-lastIndice);
 
-		// DEBUGLOG("%u;%.1f;%.3f;%.1f  # %.6f\t%.6f\t%.6f\n",
-		// 	targetInt,
-		// 	voltageADCFilter,
-		// 	Rt,
-		// 	temperature,
-		// 	v1,v2,v3);
-		DEBUGLOG("%u;%u;%.1f;%ld;%ld;%ld;%.3f;%.1f;%ld\n",
-			targetInt,
-			(uint16_t)targetV,
-			voltageADCFilter,
-			voltageRawFiltered1,
-			voltageRawFiltered2,
-			voltageRawFiltered3,
-			Rt,
-			temperature,
-			(voltageRawFiltered1 + voltageRawFiltered2 + voltageRawFiltered3)/3);
+			float Rt = R1 * value / (VSS - value);
+			float temperature = (1 / ((1 / T0) + (log(Rt / R0) / BETA))) - 273.15;
+			// DEBUGLOG("%u ; %u ; %u ; %lu ; %.1f\n",
+			// 	targetInt,
+			// 	indice,
+			// 	(uint16_t) (value + 0.5),
+			// 	(uint32_t) Rt,
+			// 	temperature);
+			DEBUGLOG("%d,\t",
+				(int16_t) (temperature*10));
+			linecount++;
+
+			if (linecount==16) {
+				DEBUGLOG("\n");
+				linecount = 0;
+			}
+
+			indice++;
+		}
+		if (indiceMesure>lastIndice){
+			lastIndice = indice - 1;
+			lastMesure = mesure;
+		}
+		
 		if (targetInt == 0xFF)
 			activeMode=mode::Step;
 	}
 }
-
